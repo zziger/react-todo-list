@@ -1,6 +1,8 @@
 import logo from './logo.svg';
 import './App.css';
 import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addTask, selectTasks } from './features/todoList/todoListSlice';
 
 function TodoComponent(props) {
   const [edit, setEdit] = React.useState(false);
@@ -54,21 +56,23 @@ function TodoComponent(props) {
 let id = 0;
 function App() {
   const [text, setText] = React.useState("");
-  const [list, setListInternal] = React.useState([]);
+  // const [list, setListInternal] = React.useState([]);
   const [tab, setTab] = React.useState("all");
+  const dispatch = useDispatch();
+  const list = useSelector(selectTasks);
 
   React.useEffect(() => {
     if ("items" in localStorage) {
-      const taskList = JSON.parse(localStorage.getItem("items"));
-      const idList = taskList.map(e => e.id);
-      id = Math.max(0, ...idList) + 1;
-      setListInternal(taskList);
+      // const taskList = JSON.parse(localStorage.getItem("items"));
+      // const idList = taskList.map(e => e.id);
+      // id = Math.max(0, ...idList) + 1;
+      // setListInternal(taskList);
     }
   }, []);
 
   function setList(element) {
-    setListInternal(element);
-    localStorage.setItem("items", JSON.stringify(element));
+    // setListInternal(element);
+    // localStorage.setItem("items", JSON.stringify(element));
   }
 
   function onFormSend(e) {
@@ -79,9 +83,10 @@ function App() {
       return;
     }
 
-    setList(
-      [...list, { state: false, name: text, id: id++ }]
-    );
+    dispatch(addTask({ state: false, name: text }));
+    // setList(
+    //   [...list, { state: false, name: text, id: id++ }]
+    // );
     setText("");
   }
 
@@ -109,6 +114,9 @@ function App() {
 
   let currentList = list;
 
+  if (tab === "done") currentList = doneList;
+  if (tab === "undone") currentList = undoneList;
+
   function moveElement(id, mod) {
     const newList = [...list];
     const currentFirstIndex = currentList.findIndex(e => e.id === id);
@@ -117,9 +125,6 @@ function App() {
     [newList[firstIndex], newList[secondIndex]] = [newList[secondIndex], newList[firstIndex]];
     setList(newList);
   }
-
-  if (tab === "done") currentList = doneList;
-  if (tab === "undone") currentList = undoneList;
 
   function removeDone() {
     const newList = list.filter(e => !e.state);
