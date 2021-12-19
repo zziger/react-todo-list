@@ -2,7 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addTask, selectTasks, removeAll, removeDone, toggleActive, remove, rename, swap } from './features/todoList/todoListSlice';
+import { addTask, selectTasks, selectCanUndo, selectCanRedo, removeAll, removeDone, toggleActive, remove, rename, swap } from './features/todoList/todoListSlice';
 import { ActionCreators } from 'redux-undo';
 
 function TodoComponent(props) {
@@ -65,6 +65,8 @@ function App() {
   const [tab, setTab] = React.useState("all");
   const dispatch = useDispatch();
   const list = useSelector(selectTasks);
+  const canUndo = useSelector(selectCanUndo);
+  const canRedo = useSelector(selectCanRedo);
 
   function onFormSend(e) {
     e.preventDefault();
@@ -119,8 +121,8 @@ function App() {
         </div>
       </div>
       <div className='buttons'>
-        <button onClick={() => dispatch(ActionCreators.undo())}>Undo</button>
-        <button onClick={() => dispatch(ActionCreators.redo())}>Redo</button>
+        <button onClick={() => dispatch(ActionCreators.undo())} disabled={!canUndo}>Undo</button>
+        <button onClick={() => dispatch(ActionCreators.redo())} disabled={!canRedo}>Redo</button>
         <button onClick={() => dispatch(removeDone())}>Usuń wykonane</button>
         <button onClick={() => dispatch(removeAll())}>Usuń wszystkie</button>
       </div>

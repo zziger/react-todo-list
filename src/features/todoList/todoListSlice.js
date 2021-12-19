@@ -44,5 +44,7 @@ export const todoListSlice = createSlice({
 export const { addTask, removeAll, removeDone, toggleActive, remove, rename, swap } = todoListSlice.actions;
 
 export const selectTasks = (state) => state.todoList.present.tasks;
+export const selectCanUndo = (state) => state.todoList.past.length;
+export const selectCanRedo = (state) => state.todoList.future.length;
 
-export default undoable(todoListSlice.reducer);
+export default undoable(todoListSlice.reducer, { limit: 10 });
