@@ -1,24 +1,19 @@
 import logo from './logo.svg';
 import './App.css';
 import React from 'react';
+import StoreContext from './store';
+import { observer } from 'mobx-react'
 
-function TodoComponent(props) {
+const TodoComponent = observer(function TodoComponent(props) {
   const [edit, setEdit] = React.useState(false);
-
-  function onChange() {
-    props.changeState(props.element.id);
-  }
-
-  function remove() {
-    props.removeElement(props.element.id);
-  }
+  const store = React.useContext(StoreContext);
 
   function toggleEdit() {
     setEdit(!edit);
   }
 
   function onNameChange(e) {
-    props.editElement(props.element.id, e.currentTarget.value);
+    store.todoList.rename(props.element.id, e.currentTarget.value);
   }
 
   function onKeyDown(e) {
@@ -27,7 +22,7 @@ function TodoComponent(props) {
 
   return <label>
     <span>
-      <input type="checkbox" checked={props.element.state} onChange={onChange} />
+      <input type="checkbox" checked={props.element.state} onChange={() => store.todoList.toggleState(props.element.id)} />
       <span className='nazwa' onDoubleClick={toggleEdit}>
         {
           edit 
@@ -43,33 +38,20 @@ function TodoComponent(props) {
       </span>
     </span>
     <span>
-      <button onClick={() => props.moveElement(props.element.id, -1)} disabled={props.index === 0}>↑</button>
-      <button onClick={() => props.moveElement(props.element.id, 1)} disabled={props.index === (props.listCount - 1)}>↓</button>
+      <button onClick={() => store.todoList.swap(props.element.id, props.elementUp.id)} disabled={!props.elementUp}>↑</button>
+      <button onClick={() => store.todoList.swap(props.element.id, props.elementDown.id)} disabled={!props.elementDown}>↓</button>
       <button onClick={toggleEdit}>Edytuj</button>
-      <button onClick={remove}>Usuń</button>
+      <button onClick={() => store.todoList.removeTask(props.element.id)}>Usuń</button>
     </span>
   </label>
-}
+})
 
 let id = 0;
 function App() {
   const [text, setText] = React.useState("");
-  const [list, setListInternal] = React.useState([]);
   const [tab, setTab] = React.useState("all");
-
-  React.useEffect(() => {
-    if ("items" in localStorage) {
-      const taskList = JSON.parse(localStorage.getItem("items"));
-      const idList = taskList.map(e => e.id);
-      id = Math.max(0, ...idList) + 1;
-      setListInternal(taskList);
-    }
-  }, []);
-
-  function setList(element) {
-    setListInternal(element);
-    localStorage.setItem("items", JSON.stringify(element));
-  }
+  const store = React.useContext(StoreContext);
+  const list = store.todoList.list;
 
   function onFormSend(e) {
     e.preventDefault();
@@ -79,29 +61,8 @@ function App() {
       return;
     }
 
-    setList(
-      [...list, { state: false, name: text, id: id++ }]
-    );
+    store.todoList.addTask({ state: false, name: text });
     setText("");
-  }
-
-  function changeState(id) {
-    const newList = [...list];
-    const element = newList.find(e => e.id === id);
-    element.state = !element.state;
-    setList(newList);
-  }
-
-  function removeElement(id) {
-    const newList = list.filter(e => e.id !== id);
-    setList(newList);
-  }
-
-  function editElement(id, name) {
-    const newList = [...list];
-    const element = newList.find(e => e.id === id);
-    element.name = name;
-    setList(newList);
   }
 
   const doneList = list.filter(e => e.state);
@@ -121,15 +82,6 @@ function App() {
   if (tab === "done") currentList = doneList;
   if (tab === "undone") currentList = undoneList;
 
-  function removeDone() {
-    const newList = list.filter(e => !e.state);
-    setList(newList);
-  }
-
-  function removeAll() {
-    setList([]);
-  }
-
   return (
     <div className="App">
       <form className="row" onSubmit={onFormSend}>
@@ -143,10 +95,8 @@ function App() {
             index={i} 
             listCount={currentList.length} 
             element={e} 
-            changeState={changeState} 
-            removeElement={removeElement} 
-            editElement={editElement}
-            moveElement={moveElement} />
+            elementUp={i === 0 ? null : currentList[i - 1]}
+            elementDown={i === (currentList.length - 1) ? null : currentList[i + 1]} />
         )}
       </div>
       <div className='info'>
@@ -167,11 +117,11 @@ function App() {
         </div>
       </div>
       <div className='buttons'>
-        <button onClick={removeDone}>Usuń wykonane</button>
-        <button onClick={removeAll}>Usuń wszystkie</button>
+        <button onClick={() => store.todoList.removeDone()}>Usuń wykonane</button>
+        <button onClick={() => store.todoList.removeAll()}>Usuń wszystkie</button>
       </div>
     </div>
   );
 }
 
-export default App;
+export default observer(App);
