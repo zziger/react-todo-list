@@ -2,78 +2,69 @@ import logo from './logo.svg';
 import './App.css';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addTask, selectTasks } from './features/todoList/todoListSlice';
+import { addTask, selectTasks, removeAll, removeDone, toggleActive, remove, rename, swap } from './features/todoList/todoListSlice';
+import { ActionCreators } from 'redux-undo';
 
 function TodoComponent(props) {
   const [edit, setEdit] = React.useState(false);
+  const [editField, setEditField] = React.useState("");
+  const dispatch = useDispatch();
 
-  function onChange() {
-    props.changeState(props.element.id);
+  function startEdit() {
+    setEditField(props.element.name);
+    setEdit(true);
   }
 
-  function remove() {
-    props.removeElement(props.element.id);
+  function cancelEdit() {
+    setEdit(false);
   }
 
-  function toggleEdit() {
-    setEdit(!edit);
-  }
+  function stopEdit() {
+    if (!editField.trim()) {
+      alert("Input text");
+      return;
+    }
 
-  function onNameChange(e) {
-    props.editElement(props.element.id, e.currentTarget.value);
+    setEdit(false);
+    dispatch(rename({ id: props.element.id, name: editField }));
   }
 
   function onKeyDown(e) {
-    if (e.key === "Enter") toggleEdit();
+    if (e.key === "Enter") stopEdit();
+    if (e.key === "Escape") cancelEdit();
   }
 
   return <label>
     <span>
-      <input type="checkbox" checked={props.element.state} onChange={onChange} />
-      <span className='nazwa' onDoubleClick={toggleEdit}>
+      <input type="checkbox" checked={props.element.state} onChange={() => dispatch(toggleActive(props.element.id))} />
+      <span className='nazwa' onDoubleClick={startEdit}>
         {
           edit 
             ? <input 
                 type="text"
                 autoFocus={true}
-                value={props.element.name}
-                onChange={onNameChange}
-                onBlur={toggleEdit} 
+                value={editField}
+                onChange={(e) => setEditField(e.currentTarget.value)}
+                onBlur={stopEdit} 
                 onKeyDown={onKeyDown} /> 
             : props.element.name
         }
       </span>
     </span>
     <span>
-      <button onClick={() => props.moveElement(props.element.id, -1)} disabled={props.index === 0}>↑</button>
-      <button onClick={() => props.moveElement(props.element.id, 1)} disabled={props.index === (props.listCount - 1)}>↓</button>
-      <button onClick={toggleEdit}>Edytuj</button>
-      <button onClick={remove}>Usuń</button>
+      <button onClick={() => dispatch(swap([ props.element.id, props.elementUp.id ]))} disabled={!props.elementUp}>↑</button>
+      <button onClick={() => dispatch(swap([ props.element.id, props.elementDown.id ]))} disabled={!props.elementDown}>↓</button>
+      <button onClick={startEdit}>Edytuj</button>
+      <button onClick={() => dispatch(remove(props.element.id))}>Usuń</button>
     </span>
   </label>
 }
 
-let id = 0;
 function App() {
   const [text, setText] = React.useState("");
-  // const [list, setListInternal] = React.useState([]);
   const [tab, setTab] = React.useState("all");
   const dispatch = useDispatch();
   const list = useSelector(selectTasks);
-
-  React.useEffect(() => {
-    if ("items" in localStorage) {
-      // const taskList = JSON.parse(localStorage.getItem("items"));
-      // const idList = taskList.map(e => e.id);
-      // id = Math.max(0, ...idList) + 1;
-      // setListInternal(taskList);
-    }
-  }, []);
-
-  function setList(element) {
-    // setListInternal(element);
-    // localStorage.setItem("items", JSON.stringify(element));
-  }
 
   function onFormSend(e) {
     e.preventDefault();
@@ -84,29 +75,7 @@ function App() {
     }
 
     dispatch(addTask({ state: false, name: text }));
-    // setList(
-    //   [...list, { state: false, name: text, id: id++ }]
-    // );
     setText("");
-  }
-
-  function changeState(id) {
-    const newList = [...list];
-    const element = newList.find(e => e.id === id);
-    element.state = !element.state;
-    setList(newList);
-  }
-
-  function removeElement(id) {
-    const newList = list.filter(e => e.id !== id);
-    setList(newList);
-  }
-
-  function editElement(id, name) {
-    const newList = [...list];
-    const element = newList.find(e => e.id === id);
-    element.name = name;
-    setList(newList);
   }
 
   const doneList = list.filter(e => e.state);
@@ -116,24 +85,6 @@ function App() {
 
   if (tab === "done") currentList = doneList;
   if (tab === "undone") currentList = undoneList;
-
-  function moveElement(id, mod) {
-    const newList = [...list];
-    const currentFirstIndex = currentList.findIndex(e => e.id === id);
-    const firstIndex = list.findIndex(e => e.id === id);
-    const secondIndex = list.findIndex(e => e.id === currentList[currentFirstIndex + mod].id);
-    [newList[firstIndex], newList[secondIndex]] = [newList[secondIndex], newList[firstIndex]];
-    setList(newList);
-  }
-
-  function removeDone() {
-    const newList = list.filter(e => !e.state);
-    setList(newList);
-  }
-
-  function removeAll() {
-    setList([]);
-  }
 
   return (
     <div className="App">
@@ -145,13 +96,9 @@ function App() {
         {currentList.map((e, i) => 
           <TodoComponent 
             key={e.id} 
-            index={i} 
-            listCount={currentList.length} 
             element={e} 
-            changeState={changeState} 
-            removeElement={removeElement} 
-            editElement={editElement}
-            moveElement={moveElement} />
+            elementUp={i === 0 ? null : currentList[i - 1]}
+            elementDown={i === (currentList.length - 1) ? null : currentList[i + 1]} />
         )}
       </div>
       <div className='info'>
@@ -172,8 +119,10 @@ function App() {
         </div>
       </div>
       <div className='buttons'>
-        <button onClick={removeDone}>Usuń wykonane</button>
-        <button onClick={removeAll}>Usuń wszystkie</button>
+        <button onClick={() => dispatch(ActionCreators.undo())}>Undo</button>
+        <button onClick={() => dispatch(ActionCreators.redo())}>Redo</button>
+        <button onClick={() => dispatch(removeDone())}>Usuń wykonane</button>
+        <button onClick={() => dispatch(removeAll())}>Usuń wszystkie</button>
       </div>
     </div>
   );
