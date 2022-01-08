@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
-import todoListSlice from './features/todoList/todoListSlice';
+import { StateWithHistory } from 'redux-undo';
+import todoListSlice, { TodoListStore } from './features/todoList/todoListSlice';
 import { loadState, saveState } from './localStorage';
 
 export const store = configureStore({
@@ -13,3 +14,7 @@ export const store = configureStore({
 store.subscribe(() => {
     saveState(store.getState());
 });
+
+export type RootStore = {
+    todoList: StateWithHistory<TodoListStore>
+};

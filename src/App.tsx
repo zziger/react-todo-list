@@ -1,11 +1,10 @@
-import logo from './logo.svg';
 import './App.css';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addTask, selectTasks, selectCanUndo, selectCanRedo, removeAll, removeDone, toggleActive, remove, rename, swap } from './features/todoList/todoListSlice';
+import { addTask, selectTasks, selectCanUndo, selectCanRedo, removeAll, removeDone, toggleActive, remove, rename, swap, TodoListTask } from './features/todoList/todoListSlice';
 import { ActionCreators } from 'redux-undo';
 
-function TodoComponent(props) {
+function TodoComponent(props: { element: TodoListTask, elementUp: TodoListTask | null, elementDown: TodoListTask | null }) {
   const [edit, setEdit] = React.useState(false);
   const [editField, setEditField] = React.useState("");
   const dispatch = useDispatch();
@@ -29,7 +28,7 @@ function TodoComponent(props) {
     dispatch(rename({ id: props.element.id, name: editField }));
   }
 
-  function onKeyDown(e) {
+  function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") stopEdit();
     if (e.key === "Escape") cancelEdit();
   }
@@ -52,8 +51,10 @@ function TodoComponent(props) {
       </span>
     </span>
     <span>
-      <button onClick={() => dispatch(swap([ props.element.id, props.elementUp.id ]))} disabled={!props.elementUp}>↑</button>
-      <button onClick={() => dispatch(swap([ props.element.id, props.elementDown.id ]))} disabled={!props.elementDown}>↓</button>
+      <button onClick={function () {
+        if (props.elementUp) dispatch(swap([ props.element.id, props.elementUp.id ]))
+      }} disabled={!props.elementUp}>↑</button>
+      <button onClick={() => props.elementDown && dispatch(swap([ props.element.id, props.elementDown.id ]))} disabled={!props.elementDown}>↓</button>
       <button onClick={startEdit}>Edytuj</button>
       <button onClick={() => dispatch(remove(props.element.id))}>Usuń</button>
     </span>
@@ -68,7 +69,7 @@ function App() {
   const canUndo = useSelector(selectCanUndo);
   const canRedo = useSelector(selectCanRedo);
 
-  function onFormSend(e) {
+  function onFormSend(e: React.FormEvent) {
     e.preventDefault();
 
     if (!text.trim()) {

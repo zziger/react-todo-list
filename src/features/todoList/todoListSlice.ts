@@ -1,7 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 import undoable from 'redux-undo';
+import { RootStore } from '../../store';
 
-const initialStore = {
+export interface TodoListTask { id: number, name: string, state: boolean };
+export interface TodoListStore { tasks: TodoListTask[], id: number };
+
+const initialStore: TodoListStore = {
     tasks: [],
     id: 0
 };
@@ -22,7 +26,7 @@ export const todoListSlice = createSlice({
         },
         toggleActive: (state, action) => {
             const task = state.tasks.find(e => e.id === action.payload);
-            task.state = !task.state;
+            if (task) task.state = !task.state;
         },
         remove: (state, action) => {
             state.tasks = state.tasks.filter((e) => e.id != action.payload);
@@ -30,7 +34,7 @@ export const todoListSlice = createSlice({
         rename: (state, action) => {
             const { id, name } = action.payload;
             const task = state.tasks.find(e => e.id === id);
-            task.name = name;
+            if (task) task.name = name;
         },
         swap: (state, action) => {
             const [id1, id2] = action.payload;
@@ -43,8 +47,8 @@ export const todoListSlice = createSlice({
 
 export const { addTask, removeAll, removeDone, toggleActive, remove, rename, swap } = todoListSlice.actions;
 
-export const selectTasks = (state) => state.todoList.present.tasks;
-export const selectCanUndo = (state) => state.todoList.past.length;
-export const selectCanRedo = (state) => state.todoList.future.length;
+export const selectTasks = (state: RootStore) => state.todoList.present.tasks;
+export const selectCanUndo = (state: RootStore) => state.todoList.past.length;
+export const selectCanRedo = (state: RootStore) => state.todoList.future.length;
 
 export default undoable(todoListSlice.reducer, { limit: 10 });
